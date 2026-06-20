@@ -1,0 +1,12 @@
+# Zależności
+node_modules/
+
+# Build
+web/dist/
+
+# Domyślny skarbiec serwera MCP (Twoje notatki nie trafiają do repo)
+mcp-server/vault/
+
+# Logi i pliki systemowe
+*.log
+.DS_Store
