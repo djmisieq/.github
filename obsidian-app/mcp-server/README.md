@@ -6,15 +6,38 @@ przeglądać, wyszukiwać, tworzyć i edytować Twoje notatki.
 
 ## Narzędzia (tools)
 
+Podstawowe:
+
 | Narzędzie        | Opis                                                          |
 |------------------|--------------------------------------------------------------|
 | `list_notes`     | Lista wszystkich notatek                                     |
 | `read_note`      | Treść wskazanej notatki                                      |
 | `write_note`     | Utworzenie/nadpisanie notatki                               |
+| `append_to_note` | Dopisanie treści na końcu (bez nadpisywania)                |
 | `delete_note`    | Usunięcie notatki                                           |
 | `search_notes`   | Wyszukiwanie frazy w nazwach i treści                       |
 | `get_backlinks`  | Notatki linkujące `[[...]]` do podanej                      |
 | `get_graph`      | Graf powiązań (węzły + krawędzie) w formacie JSON           |
+
+Warstwa „Aion Mind" (wsparcie pracy AI z wiedzą):
+
+| Narzędzie          | Opis                                                        |
+|--------------------|------------------------------------------------------------|
+| `suggest_links`    | Proponuje podobne, niepołączone notatki (po wspólnych słowach) |
+| `get_orphans`      | Notatki bez żadnych połączeń (do uporządkowania)           |
+| `get_all_tags`     | Lista tagów z liczbą wystąpień                             |
+| `get_notes_by_tag` | Notatki oznaczone danym tagiem                            |
+| `daily_note`       | Dzisiejsza notatka dzienna (RRRR-MM-DD), tworzona w razie potrzeby |
+
+## Komendy (MCP prompts)
+
+W Claude Desktop pojawią się jako gotowe akcje do wyboru:
+
+| Komenda             | Co robi                                                      |
+|---------------------|-------------------------------------------------------------|
+| `porzadkuj_notatki` | Agent znajduje sieroty i proponuje tagi + połączenia        |
+| `znajdz_polaczenia` | Dla wskazanej notatki proponuje brakujące linki `[[...]]`   |
+| `dzienna_synteza`   | Zbiera ostatnie wątki i dopisuje syntezę do notatki dziennej |
 
 ## Instalacja
 

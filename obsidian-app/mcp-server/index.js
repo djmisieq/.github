@@ -52,6 +52,56 @@ function extractLinks(content) {
   return [...out];
 }
 
+// Wyciąganie tagów #tag (bez znaku #).
+function extractTags(content) {
+  const out = new Set();
+  for (const m of content.matchAll(/(?:^|\s)#([\p{L}][\p{L}\p{N}_/-]*)/gu)) out.add(m[1]);
+  return [...out];
+}
+
+// Bardzo krótkie słowa i częste wyrazy pomijamy przy szukaniu podobieństwa.
+const STOP = new Set(
+  ("i oraz lub a w we z ze na do od po za o u to to że co jak czy nie tak jest są być " +
+    "the and for that this with from have are was you your not but all can").split(" "),
+);
+
+/** Zamienia treść na zbiór znaczących słów (małe litery, bez krótkich i stop-słów). */
+function tokenize(content) {
+  const words = content
+    .toLowerCase()
+    .replace(/\[\[[^\]]*\]\]/g, " ") // usuń linki
+    .replace(/[#`*_>\-\[\]()!.,:;"'/\\]/g, " ")
+    .split(/\s+/);
+  const set = new Set();
+  for (const w of words) if (w.length > 3 && !STOP.has(w)) set.add(w);
+  return set;
+}
+
+/** Dla danej notatki znajduje najbardziej podobne (po wspólnych słowach), jeszcze niepołączone. */
+async function suggestLinks(name, limit = 5) {
+  const target = await readNote(name);
+  const targetWords = tokenize(target);
+  const alreadyLinked = new Set(extractLinks(target).map((l) => l.toLowerCase()));
+  const names = await listNotes();
+  const scored = [];
+  for (const other of names) {
+    if (other === name || alreadyLinked.has(other.toLowerCase())) continue;
+    const words = tokenize(await readNote(other));
+    let shared = 0;
+    const common = [];
+    for (const w of words) if (targetWords.has(w)) { shared++; common.push(w); }
+    if (shared >= 2) scored.push({ note: other, score: shared, common: common.slice(0, 6) });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit);
+}
+
+/** Nazwa dzisiejszej notatki dziennej, np. 2026-06-20. */
+function todayName() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 // --- Definicja serwera ----------------------------------------------------
 const server = new McpServer({
   name: "obsidian-clone-mcp",
@@ -192,6 +242,211 @@ server.registerTool(
       content: [{ type: "text", text: JSON.stringify({ nodes: names, edges }, null, 2) }],
     };
   },
+);
+
+// === Warstwa "Aion Mind": narzędzia wspierające pracę AI z wiedzą ==========
+
+server.registerTool(
+  "append_to_note",
+  {
+    title: "Dopisz do notatki",
+    description:
+      "Dopisuje treść na końcu notatki (nie nadpisuje). Tworzy notatkę, jeśli nie istnieje. " +
+      "Przydatne, gdy agent dorzuca myśli, linki lub podsumowania.",
+    inputSchema: {
+      name: z.string().describe("Nazwa notatki bez .md"),
+      content: z.string().describe("Treść Markdown do dopisania na końcu"),
+    },
+  },
+  async ({ name, content }) => {
+    await ensureVault();
+    let existing = "";
+    try {
+      existing = await readNote(name);
+    } catch {
+      /* nowa notatka */
+    }
+    const sep = existing && !existing.endsWith("\n") ? "\n\n" : existing ? "\n" : "";
+    await fs.writeFile(notePath(name), existing + sep + content, "utf8");
+    return { content: [{ type: "text", text: `Dopisano do notatki: ${name}` }] };
+  },
+);
+
+server.registerTool(
+  "suggest_links",
+  {
+    title: "Zaproponuj połączenia",
+    description:
+      "Dla wskazanej notatki znajduje inne, tematycznie podobne, jeszcze niepołączone notatki " +
+      "(na podstawie wspólnych słów). Zwraca kandydatów do dodania linków [[...]].",
+    inputSchema: { name: z.string().describe("Nazwa notatki bez .md") },
+  },
+  async ({ name }) => {
+    const sug = await suggestLinks(name);
+    if (sug.length === 0) {
+      return { content: [{ type: "text", text: "Brak oczywistych kandydatów do połączenia." }] };
+    }
+    const text = sug
+      .map((s) => `• [[${s.note}]] (wspólne: ${s.common.join(", ")})`)
+      .join("\n");
+    return { content: [{ type: "text", text }] };
+  },
+);
+
+server.registerTool(
+  "get_orphans",
+  {
+    title: "Notatki-sieroty",
+    description: "Zwraca notatki bez żadnych połączeń (nie linkują i nie są linkowane). Kandydaci do uporządkowania.",
+    inputSchema: {},
+  },
+  async () => {
+    const names = await listNotes();
+    const linked = new Set();
+    const contents = new Map();
+    for (const n of names) contents.set(n, await readNote(n));
+    const lower = new Map(names.map((n) => [n.toLowerCase(), n]));
+    for (const n of names) {
+      for (const link of extractLinks(contents.get(n))) {
+        const t = lower.get(link.toLowerCase());
+        if (t && t !== n) {
+          linked.add(n);
+          linked.add(t);
+        }
+      }
+    }
+    const orphans = names.filter((n) => !linked.has(n));
+    return { content: [{ type: "text", text: orphans.join("\n") || "(brak sierot — wszystko połączone)" }] };
+  },
+);
+
+server.registerTool(
+  "get_all_tags",
+  {
+    title: "Wszystkie tagi",
+    description: "Zwraca listę tagów wraz z liczbą notatek, w których występują.",
+    inputSchema: {},
+  },
+  async () => {
+    const counts = new Map();
+    for (const n of await listNotes()) {
+      for (const t of extractTags(await readNote(n))) counts.set(t, (counts.get(t) ?? 0) + 1);
+    }
+    const text = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([t, c]) => `#${t} (${c})`)
+      .join("\n");
+    return { content: [{ type: "text", text: text || "(brak tagów)" }] };
+  },
+);
+
+server.registerTool(
+  "get_notes_by_tag",
+  {
+    title: "Notatki po tagu",
+    description: "Zwraca nazwy notatek oznaczonych podanym tagiem.",
+    inputSchema: { tag: z.string().describe("Tag bez znaku # (np. pomysly)") },
+  },
+  async ({ tag }) => {
+    const want = tag.replace(/^#/, "").toLowerCase();
+    const out = [];
+    for (const n of await listNotes()) {
+      if (extractTags(await readNote(n)).some((t) => t.toLowerCase() === want)) out.push(n);
+    }
+    return { content: [{ type: "text", text: out.join("\n") || `(brak notatek z tagiem #${want})` }] };
+  },
+);
+
+server.registerTool(
+  "daily_note",
+  {
+    title: "Notatka dzienna",
+    description:
+      "Zwraca (tworząc w razie potrzeby) dzisiejszą notatkę dzienną w formacie RRRR-MM-DD. " +
+      "Podstawa do codziennej syntezy i szybkiego zapisu.",
+    inputSchema: {},
+  },
+  async () => {
+    const name = todayName();
+    let content;
+    try {
+      content = await readNote(name);
+    } catch {
+      content = `# ${name}\n\n## Notatki dnia\n\n`;
+      await fs.writeFile(notePath(name), content, "utf8");
+    }
+    return { content: [{ type: "text", text: `# ${name}\n\n${content}` }] };
+  },
+);
+
+// === "Komendy" (MCP prompts) — w Claude Desktop pojawią się jako gotowe akcje =
+
+server.registerPrompt(
+  "porzadkuj_notatki",
+  {
+    title: "Uporządkuj notatki",
+    description: "Agent przegląda notatki-sieroty i proponuje dla nich tagi oraz połączenia.",
+    argsSchema: {},
+  },
+  () => ({
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text:
+            "Jesteś moim asystentem wiedzy. Użyj narzędzia get_orphans, by znaleźć notatki bez połączeń. " +
+            "Dla każdej: przeczytaj ją (read_note), zaproponuj 2-4 trafne tagi #tag oraz powiązania (suggest_links). " +
+            "Pokaż mi propozycje do akceptacji ZANIM cokolwiek zapiszesz. Po akceptacji użyj append_to_note.",
+        },
+      },
+    ],
+  }),
+);
+
+server.registerPrompt(
+  "znajdz_polaczenia",
+  {
+    title: "Znajdź połączenia",
+    description: "Agent szuka brakujących powiązań między notatkami i proponuje linki [[...]].",
+    argsSchema: { notatka: z.string().describe("Nazwa notatki, dla której szukamy połączeń") },
+  },
+  ({ notatka }) => ({
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text:
+            `Dla notatki „${notatka}" użyj suggest_links, oceń trafność każdego kandydata na podstawie treści ` +
+            `(read_note) i zaproponuj konkretne zdania z linkami [[...]] do dopisania. Zapisz dopiero po mojej zgodzie.`,
+        },
+      },
+    ],
+  }),
+);
+
+server.registerPrompt(
+  "dzienna_synteza",
+  {
+    title: "Dzienna synteza",
+    description: "Agent zbiera ostatnie notatki i tworzy syntezę w notatce dziennej.",
+    argsSchema: {},
+  },
+  () => ({
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text:
+            "Wykonaj dzienną syntezę: 1) daily_note, by otworzyć dzisiejszą notatkę; 2) list_notes i przejrzyj " +
+            "notatki zmienione/istotne; 3) napisz zwięzłe podsumowanie głównych wątków, otwartych pytań i powiązań, " +
+            "a następnie append_to_note do dzisiejszej notatki. Dodaj linki [[...]] do omawianych notatek.",
+        },
+      },
+    ],
+  }),
 );
 
 // --- Start ----------------------------------------------------------------

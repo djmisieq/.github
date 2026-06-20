@@ -6,6 +6,7 @@ import { Preview } from "./components/Preview";
 import { Backlinks } from "./components/Backlinks";
 import { GraphView } from "./components/GraphView";
 import { Search } from "./components/Search";
+import { QuickSwitcher } from "./components/QuickSwitcher";
 
 type View = "note" | "graph" | "search";
 
@@ -14,6 +15,7 @@ export default function App() {
   const [current, setCurrent] = useState<string | null>(null);
   const [view, setView] = useState<View>("note");
   const [draft, setDraft] = useState("");
+  const [switcherOpen, setSwitcherOpen] = useState(false);
 
   // Po wczytaniu skarbca otwórz pierwszą notatkę.
   useEffect(() => {
@@ -41,6 +43,18 @@ export default function App() {
     return () => clearTimeout(id);
   }, [draft, current, vault]);
 
+  // Globalny skrót: Ctrl/⌘+K otwiera szybki przełącznik notatek.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSwitcherOpen((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const existing = useMemo(
     () => new Set(vault.notes.map((n) => n.name.toLowerCase())),
     [vault.notes],
@@ -59,6 +73,13 @@ export default function App() {
 
   return (
     <div className="app">
+      {switcherOpen && (
+        <QuickSwitcher
+          noteNames={noteNames}
+          onOpen={openNote}
+          onClose={() => setSwitcherOpen(false)}
+        />
+      )}
       <header className="topbar">
         <div className="brand">📝 Moje Notatki</div>
         <nav className="views">
@@ -73,6 +94,9 @@ export default function App() {
           </button>
         </nav>
         <div className="vault-info">
+          <button className="hint" onClick={() => setSwitcherOpen(true)} title="Szybki przełącznik">
+            ⌘K
+          </button>
           <span title="Aktualny skarbiec">📁 {vault.store.label}</span>
           {vault.fsSupported && (
             <button onClick={() => void vault.openFolder()} title="Otwórz folder z plikami .md">

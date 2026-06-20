@@ -228,6 +228,50 @@ body {
 .search li:hover { background: var(--bg-3); }
 .search .snippet { color: var(--muted); font-size: 13px; }
 
+/* ---------- Quick Switcher (Ctrl/⌘+K) ---------- */
+.qs-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 12vh;
+  z-index: 50;
+}
+.qs-box {
+  width: 560px;
+  max-width: 90vw;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.qs-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  padding: 16px 18px;
+  font-size: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.qs-list { list-style: none; margin: 0; padding: 6px; max-height: 50vh; overflow-y: auto; }
+.qs-list li { padding: 9px 12px; border-radius: 8px; cursor: pointer; }
+.qs-list li.active { background: var(--accent); color: #fff; }
+.qs-list li.create { color: #9ad29a; }
+.qs-list li.active.create { color: #fff; }
+
+.hint {
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+
 /* ---------- Pozostałe ---------- */
 .muted { color: var(--muted); }
 .center { text-align: center; margin-top: 60px; }

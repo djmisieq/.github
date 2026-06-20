@@ -11,9 +11,11 @@ nic nie jest zamknięte w cudzej chmurze.
 - **Backlinki** — zobacz, które notatki linkują do bieżącej
 - **Graf powiązań** — interaktywna wizualizacja połączeń (przeciągaj węzły, klik otwiera notatkę)
 - **Wyszukiwanie** pełnotekstowe po nazwach i treści
+- **Quick Switcher** (Ctrl/⌘+K) — błyskawiczne przejście do notatki lub utworzenie nowej
 - **Tagi `#tag`** — filtrowanie notatek po tagach
 - **Skarbiec na dysku** — prawdziwe pliki `.md` (File System Access API) lub tryb demo w przeglądarce
-- **Integracja MCP** — asystent AI (np. Claude) może czytać i pisać Twoje notatki
+- **Integracja MCP / „Aion Mind"** — asystent AI (np. Claude) czyta, pisze, łączy i porządkuje Twoje notatki
+  (czat z wiedzą, auto-linkowanie, agent porządkujący, dzienna synteza). Zob. [`mcp-server/README.md`](mcp-server/README.md).
 
 ## 📁 Struktura projektu
 
