@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useVault } from "./hooks/useVault";
 import { Sidebar } from "./components/Sidebar";
-import { Editor } from "./components/Editor";
+import { LiveEditor } from "./components/LiveEditor";
 import { Preview } from "./components/Preview";
 import { Backlinks } from "./components/Backlinks";
 import { GraphView } from "./components/GraphView";
@@ -10,6 +10,7 @@ import { QuickSwitcher } from "./components/QuickSwitcher";
 import { CommandPalette, type Command } from "./components/CommandPalette";
 
 type View = "note" | "graph" | "search";
+type Mode = "live" | "read";
 
 export default function App() {
   const vault = useVault();
@@ -18,6 +19,7 @@ export default function App() {
   const [draft, setDraft] = useState("");
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [mode, setMode] = useState<Mode>("live");
 
   // Po wczytaniu skarbca otwórz pierwszą notatkę.
   useEffect(() => {
@@ -164,13 +166,30 @@ export default function App() {
               <>
                 <div className="note-header">
                   <h2>{current}</h2>
-                </div>
-                <div className="split">
-                  <Editor value={draft} onChange={setDraft} noteNames={noteNames} />
-                  <div className="preview-pane">
-                    <Preview content={draft} existing={existing} onOpen={openNote} />
-                    <Backlinks note={current} notes={vault.notes} onOpen={openNote} />
+                  <div className="mode-toggle">
+                    <button className={mode === "live" ? "active" : ""} onClick={() => setMode("live")}>
+                      ✏️ Edycja
+                    </button>
+                    <button className={mode === "read" ? "active" : ""} onClick={() => setMode("read")}>
+                      📖 Czytanie
+                    </button>
                   </div>
+                </div>
+                <div className="note-body">
+                  {mode === "live" ? (
+                    <LiveEditor
+                      key={current}
+                      value={draft}
+                      onChange={setDraft}
+                      noteNames={noteNames}
+                      onOpen={openNote}
+                    />
+                  ) : (
+                    <div className="preview reading">
+                      <Preview content={draft} existing={existing} onOpen={openNote} />
+                    </div>
+                  )}
+                  <Backlinks note={current} notes={vault.notes} onOpen={openNote} />
                 </div>
               </>
             ) : (

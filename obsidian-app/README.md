@@ -6,7 +6,7 @@ nic nie jest zamknięte w cudzej chmurze.
 
 ## ✨ Funkcje
 
-- **Edytor Markdown** z podglądem na żywo (split: edycja po lewej, podgląd po prawej)
+- **Live Preview** (CodeMirror 6, jak w Obsidianie) — formatowanie widać w trakcie pisania, surowa składnia pokazuje się w aktywnej linii; tryb **Czytanie** dla pełnego renderu
 - **Linki `[[wiki]]`** — łącz notatki, z podpowiedziami nazw po wpisaniu `[[`
 - **Backlinki** — zobacz, które notatki linkują do bieżącej
 - **Graf powiązań** — interaktywna wizualizacja połączeń (przeciągaj węzły, klik otwiera notatkę)

@@ -127,8 +127,38 @@ body {
 
 /* ---------- Content ---------- */
 .content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.note-header { padding: 12px 18px 0; }
+.note-header {
+  padding: 12px 18px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .note-header h2 { margin: 0; }
+.mode-toggle { display: flex; gap: 4px; }
+.mode-toggle button {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.mode-toggle button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Tryb live: edytor CodeMirror + backlinki pod spodem */
+.note-body { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+.live-editor { flex: 1; min-height: 0; }
+.preview.reading { flex: 1; max-width: 760px; }
+
+/* Dekoracje live preview (CodeMirror) */
+.cm-wikilink {
+  color: var(--accent);
+  border-bottom: 1px dashed var(--accent);
+  cursor: pointer;
+}
+.cm-wikilink-raw { color: var(--accent); }
+.cm-tag { color: #b9adff; }
 
 .split { flex: 1; display: flex; min-height: 0; }
 .editor-wrap { flex: 1; position: relative; display: flex; }
