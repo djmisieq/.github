@@ -82,16 +82,16 @@ const livePreview = ViewPlugin.fromClass(
 // --- Wikilinki [[...]] i tagi #tag (poza gramatyką Markdown) ----------------
 
 class WikiWidget extends WidgetType {
-  constructor(readonly target: string, readonly label: string) {
+  constructor(readonly target: string, readonly label: string, readonly embed = false) {
     super();
   }
   eq(other: WikiWidget) {
-    return other.target === this.target && other.label === this.label;
+    return other.target === this.target && other.label === this.label && other.embed === this.embed;
   }
   toDOM() {
     const a = document.createElement("a");
-    a.className = "cm-wikilink";
-    a.textContent = this.label;
+    a.className = this.embed ? "cm-wikilink cm-embed-chip" : "cm-wikilink";
+    a.textContent = this.embed ? `📄 ${this.label}` : this.label;
     a.dataset.note = this.target;
     return a;
   }
@@ -100,10 +100,10 @@ class WikiWidget extends WidgetType {
   }
 }
 
-const WIKI_RE = /\[\[([^\]\n]+)\]\]/g;
+const WIKI_RE = /(!?)\[\[([^\]\n]+)\]\]/g;
 const TAG_RE = /(^|\s)#([\p{L}][\p{L}\p{N}_/-]*)/gu;
 
-/** Renderuje [[linki]] jako klikalne elementy i koloruje #tagi (poza aktywną linią). */
+/** Renderuje [[linki]] i osadzenia ![[...]] jako klikalne elementy oraz koloruje #tagi (poza aktywną linią). */
 const wikiAndTags = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
@@ -120,25 +120,23 @@ const wikiAndTags = ViewPlugin.fromClass(
       const activeLine = view.state.doc.lineAt(view.state.selection.main.head).number;
       for (const { from, to } of view.visibleRanges) {
         const text = view.state.doc.sliceString(from, to);
-        // Wikilinki
         for (const m of text.matchAll(WIKI_RE)) {
           const start = from + m.index!;
           const end = start + m[0].length;
           const line = view.state.doc.lineAt(start).number;
-          const [target, alias] = m[1].includes("|") ? m[1].split("|") : [m[1], m[1]];
+          const isEmbed = m[1] === "!";
+          const [target, alias] = m[2].includes("|") ? m[2].split("|") : [m[2], m[2]];
           if (line === activeLine) {
-            // W aktywnej linii tylko podświetlamy, by dało się edytować.
             builder.add(start, end, Decoration.mark({ class: "cm-wikilink-raw" }));
           } else {
             builder.add(
               start,
               end,
-              Decoration.replace({ widget: new WikiWidget(target.trim(), alias.trim()) }),
+              Decoration.replace({ widget: new WikiWidget(target.trim(), alias.trim(), isEmbed) }),
             );
           }
         }
       }
-      // Tagi (osobny przebieg, sortowanie zapewni RangeSetBuilder przez ponowne zebranie)
       return this.merge(view, builder.finish());
     }
     merge(view: EditorView, wiki: DecorationSet): DecorationSet {

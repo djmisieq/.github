@@ -186,7 +186,12 @@ export default function App() {
                     />
                   ) : (
                     <div className="preview reading">
-                      <Preview content={draft} existing={existing} onOpen={openNote} />
+                      <Preview
+                        content={draft}
+                        existing={existing}
+                        onOpen={openNote}
+                        resolve={(name) => vault.getNote(name)?.content ?? null}
+                      />
                     </div>
                   )}
                   <Backlinks note={current} notes={vault.notes} onOpen={openNote} />

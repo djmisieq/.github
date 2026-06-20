@@ -59,6 +59,32 @@ function extractTags(content) {
   return [...out];
 }
 
+/** Rozwija osadzenia ![[Nazwa]] wstawiając treść osadzanych notatek (z limitem głębokości). */
+async function expandEmbeds(name, depth = 0, seen = new Set()) {
+  let content;
+  try {
+    content = await readNote(name);
+  } catch {
+    return `> [brak notatki: ${name}]`;
+  }
+  if (depth >= 2) return content;
+  const parts = [];
+  let last = 0;
+  for (const m of content.matchAll(/!\[\[([^\]\n]+)\]\]/g)) {
+    parts.push(content.slice(last, m.index));
+    const target = m[1].split("|")[0].trim();
+    if (seen.has(target.toLowerCase())) {
+      parts.push(`> [osadzenie pominięte (pętla): ${target}]`);
+    } else {
+      const body = await expandEmbeds(target, depth + 1, new Set(seen).add(target.toLowerCase()));
+      parts.push(`\n> **${target}**\n` + body.replace(/^/gm, "> ") + "\n");
+    }
+    last = m.index + m[0].length;
+  }
+  parts.push(content.slice(last));
+  return parts.join("");
+}
+
 // Bardzo krótkie słowa i częste wyrazy pomijamy przy szukaniu podobieństwa.
 const STOP = new Set(
   ("i oraz lub a w we z ze na do od po za o u to to że co jak czy nie tak jest są być " +
@@ -212,6 +238,26 @@ server.registerTool(
     } catch {
       return { content: [{ type: "text", text: `Nie znaleziono notatki: ${name}` }], isError: true };
     }
+  },
+);
+
+server.registerTool(
+  "read_note_expanded",
+  {
+    title: "Czytaj notatkę z osadzeniami",
+    description:
+      "Jak read_note, ale rozwija osadzenia ![[Nazwa]], wstawiając treść osadzanych notatek. " +
+      "Przydatne, gdy notatka komponuje treść z innych.",
+    inputSchema: { name: z.string().describe("Nazwa notatki bez .md") },
+  },
+  async ({ name }) => {
+    try {
+      await readNote(name);
+    } catch {
+      return { content: [{ type: "text", text: `Nie znaleziono notatki: ${name}` }], isError: true };
+    }
+    const text = await expandEmbeds(name, 0, new Set([name.toLowerCase()]));
+    return { content: [{ type: "text", text }] };
   },
 );
 

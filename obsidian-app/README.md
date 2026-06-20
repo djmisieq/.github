@@ -8,6 +8,7 @@ nic nie jest zamknięte w cudzej chmurze.
 
 - **Live Preview** (CodeMirror 6, jak w Obsidianie) — formatowanie widać w trakcie pisania, surowa składnia pokazuje się w aktywnej linii; tryb **Czytanie** dla pełnego renderu
 - **Linki `[[wiki]]`** — łącz notatki, z podpowiedziami nazw po wpisaniu `[[`
+- **Osadzanie `![[notatka]]`** — wstaw treść jednej notatki w drugiej (transkluzja)
 - **Backlinki** — zobacz, które notatki linkują do bieżącej
 - **Graf powiązań** — interaktywna wizualizacja połączeń (przeciągaj węzły, klik otwiera notatkę)
 - **Wyszukiwanie** pełnotekstowe po nazwach i treści

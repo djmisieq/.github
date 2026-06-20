@@ -12,6 +12,7 @@ Podstawowe:
 |------------------|--------------------------------------------------------------|
 | `list_notes`     | Lista wszystkich notatek                                     |
 | `read_note`      | Treść wskazanej notatki                                      |
+| `read_note_expanded` | Treść z rozwiniętymi osadzeniami `![[...]]`              |
 | `write_note`     | Utworzenie/nadpisanie notatki                               |
 | `append_to_note` | Dopisanie treści na końcu (bez nadpisywania)                |
 | `delete_note`    | Usunięcie notatki                                           |
@@ -79,6 +80,9 @@ i dodaj wpis (podmień ścieżki na własne):
   }
 }
 ```
+
+Gotowy szablon znajdziesz w pliku [`claude_desktop_config.example.json`](claude_desktop_config.example.json)
+— wystarczy podmienić ścieżki.
 
 Zrestartuj Claude Desktop. Powinien pojawić się serwer **„moje-notatki"** wraz z
 listą narzędzi. Od tej chwili możesz np. poprosić: *„wypisz moje notatki"* albo

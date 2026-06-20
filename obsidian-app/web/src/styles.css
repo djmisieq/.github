@@ -159,6 +159,31 @@ body {
 }
 .cm-wikilink-raw { color: var(--accent); }
 .cm-tag { color: #b9adff; }
+.cm-embed-chip {
+  display: inline-block;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Osadzone notatki ![[...]] w trybie Czytanie */
+.embed {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  margin: 12px 0;
+  background: rgba(124, 92, 255, 0.06);
+}
+.embed-title {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.embed-title a { color: var(--accent); text-decoration: none; }
+.embed-body { padding: 4px 14px; }
+.embed.missing { padding: 8px 12px; color: #c46a6a; }
 
 .split { flex: 1; display: flex; min-height: 0; }
 .editor-wrap { flex: 1; position: relative; display: flex; }

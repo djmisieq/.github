@@ -1,0 +1,12 @@
+{
+  "_komentarz": "Przyklad konfiguracji Claude Desktop. Skopiuj zawartosc mcpServers do swojego claude_desktop_config.json i podmien sciezki. macOS: ~/Library/Application Support/Claude/claude_desktop_config.json | Windows: %APPDATA%/Claude/claude_desktop_config.json",
+  "mcpServers": {
+    "moje-notatki": {
+      "command": "node",
+      "args": ["/PELNA/SCIEZKA/DO/obsidian-app/mcp-server/index.js"],
+      "env": {
+        "VAULT_PATH": "/PELNA/SCIEZKA/DO/folderu/z/notatkami"
+      }
+    }
+  }
+}
