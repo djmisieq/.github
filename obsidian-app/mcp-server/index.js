@@ -77,20 +77,26 @@ function tokenize(content) {
   return set;
 }
 
-/** Dla danej notatki znajduje najbardziej podobne (po wspólnych słowach), jeszcze niepołączone. */
+/**
+ * Dla danej notatki znajduje najbardziej podobne, jeszcze niepołączone notatki.
+ * Używa podobieństwa kosinusowego na wektorach TF-IDF (ważone znaczenie słów).
+ */
 async function suggestLinks(name, limit = 5) {
   const target = await readNote(name);
-  const targetWords = tokenize(target);
   const alreadyLinked = new Set(extractLinks(target).map((l) => l.toLowerCase()));
-  const names = await listNotes();
+  const { docs } = await buildIndex();
+  const self = docs.find((d) => d.name === name);
+  if (!self) return [];
   const scored = [];
-  for (const other of names) {
-    if (other === name || alreadyLinked.has(other.toLowerCase())) continue;
-    const words = tokenize(await readNote(other));
-    let shared = 0;
+  for (const doc of docs) {
+    if (doc.name === name || alreadyLinked.has(doc.name.toLowerCase())) continue;
+    const sim = cosine(self.vec, self.norm, doc.vec, doc.norm);
+    if (sim <= 0) continue;
+    // Najważniejsze wspólne słowa (do wyjaśnienia powiązania).
     const common = [];
-    for (const w of words) if (targetWords.has(w)) { shared++; common.push(w); }
-    if (shared >= 2) scored.push({ note: other, score: shared, common: common.slice(0, 6) });
+    for (const [w, v] of self.vec) if (doc.vec.has(w)) common.push([w, v]);
+    common.sort((a, b) => b[1] - a[1]);
+    scored.push({ note: doc.name, score: sim, common: common.slice(0, 6).map(([w]) => w) });
   }
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, limit);
@@ -100,6 +106,77 @@ async function suggestLinks(name, limit = 5) {
 function todayName() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// === Wyszukiwanie semantyczne (TF-IDF + podobieństwo kosinusowe) ============
+// Uwaga: to wersja leksykalno-semantyczna (waży znaczenie słów), bez modelu
+// neuronowego — dzięki temu działa bez kluczy API i zależności. Architektura
+// pozwala później podmienić to na prawdziwe embeddingi.
+
+/** Liczy częstość słów w treści (z pominięciem stop-słów i krótkich wyrazów). */
+function termFreq(content) {
+  const tf = new Map();
+  const lowered = content
+    .toLowerCase()
+    .replace(/\[\[[^\]]*\]\]/g, " ")
+    .replace(/[#`*_>\-\[\]()!.,:;"'/\\]/g, " ");
+  for (const w of lowered.split(/\s+/)) {
+    if (w.length > 3 && !STOP.has(w)) tf.set(w, (tf.get(w) ?? 0) + 1);
+  }
+  return tf;
+}
+
+/** Buduje indeks TF-IDF nad wszystkimi notatkami skarbca. */
+async function buildIndex() {
+  const names = await listNotes();
+  const docs = [];
+  const df = new Map(); // ile dokumentów zawiera dane słowo
+  for (const name of names) {
+    const tf = termFreq(await readNote(name));
+    for (const w of tf.keys()) df.set(w, (df.get(w) ?? 0) + 1);
+    docs.push({ name, tf });
+  }
+  const N = Math.max(1, docs.length);
+  const idf = new Map();
+  for (const [w, d] of df) idf.set(w, Math.log(1 + N / d));
+
+  // Wektory TF-IDF + ich normy.
+  for (const doc of docs) {
+    const vec = new Map();
+    let sum = 0;
+    for (const [w, c] of doc.tf) {
+      const v = c * (idf.get(w) ?? 0);
+      vec.set(w, v);
+      sum += v * v;
+    }
+    doc.vec = vec;
+    doc.norm = Math.sqrt(sum) || 1;
+  }
+  return { docs, idf };
+}
+
+/** Wektor TF-IDF dla zapytania (lub dowolnego tekstu) w przestrzeni danego idf. */
+function vectorize(text, idf) {
+  const tf = termFreq(text);
+  const vec = new Map();
+  let sum = 0;
+  for (const [w, c] of tf) {
+    const v = c * (idf.get(w) ?? Math.log(2)); // nieznane słowo: lekka waga
+    vec.set(w, v);
+    sum += v * v;
+  }
+  return { vec, norm: Math.sqrt(sum) || 1 };
+}
+
+/** Podobieństwo kosinusowe dwóch rzadkich wektorów (Map). */
+function cosine(a, an, b, bn) {
+  let dot = 0;
+  const [small, large] = a.size < b.size ? [a, b] : [b, a];
+  for (const [w, v] of small) {
+    const o = large.get(w);
+    if (o) dot += v * o;
+  }
+  return dot / (an * bn);
 }
 
 // --- Definicja serwera ----------------------------------------------------
@@ -278,7 +355,7 @@ server.registerTool(
     title: "Zaproponuj połączenia",
     description:
       "Dla wskazanej notatki znajduje inne, tematycznie podobne, jeszcze niepołączone notatki " +
-      "(na podstawie wspólnych słów). Zwraca kandydatów do dodania linków [[...]].",
+      "(podobieństwo kosinusowe TF-IDF). Zwraca kandydatów do dodania linków [[...]].",
     inputSchema: { name: z.string().describe("Nazwa notatki bez .md") },
   },
   async ({ name }) => {
@@ -289,6 +366,34 @@ server.registerTool(
     const text = sug
       .map((s) => `• [[${s.note}]] (wspólne: ${s.common.join(", ")})`)
       .join("\n");
+    return { content: [{ type: "text", text }] };
+  },
+);
+
+server.registerTool(
+  "semantic_search",
+  {
+    title: "Wyszukiwanie semantyczne",
+    description:
+      "Wyszukuje notatki najbardziej pasujące znaczeniowo do zapytania (TF-IDF + podobieństwo " +
+      "kosinusowe). W odróżnieniu od search_notes nie wymaga dokładnego słowa — szereguje po trafności.",
+    inputSchema: {
+      query: z.string().describe("Pytanie lub opis tematu w języku naturalnym"),
+      limit: z.number().int().min(1).max(20).optional().describe("Ile wyników (domyślnie 8)"),
+    },
+  },
+  async ({ query, limit }) => {
+    const { docs, idf } = await buildIndex();
+    const q = vectorize(query, idf);
+    const scored = docs
+      .map((d) => ({ name: d.name, score: cosine(q.vec, q.norm, d.vec, d.norm) }))
+      .filter((s) => s.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit ?? 8);
+    if (scored.length === 0) {
+      return { content: [{ type: "text", text: `Brak trafień dla: ${query}` }] };
+    }
+    const text = scored.map((s) => `• ${s.name}  (trafność ${s.score.toFixed(3)})`).join("\n");
     return { content: [{ type: "text", text }] };
   },
 );

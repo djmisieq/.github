@@ -23,7 +23,8 @@ Warstwa „Aion Mind" (wsparcie pracy AI z wiedzą):
 
 | Narzędzie          | Opis                                                        |
 |--------------------|------------------------------------------------------------|
-| `suggest_links`    | Proponuje podobne, niepołączone notatki (po wspólnych słowach) |
+| `semantic_search`  | Wyszukiwanie znaczeniowe (TF-IDF + kosinus), szereguje po trafności |
+| `suggest_links`    | Proponuje podobne, niepołączone notatki (podobieństwo kosinusowe) |
 | `get_orphans`      | Notatki bez żadnych połączeń (do uporządkowania)           |
 | `get_all_tags`     | Lista tagów z liczbą wystąpień                             |
 | `get_notes_by_tag` | Notatki oznaczone danym tagiem                            |

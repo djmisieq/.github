@@ -263,6 +263,26 @@ body {
 .qs-list li.active { background: var(--accent); color: #fff; }
 .qs-list li.create { color: #9ad29a; }
 .qs-list li.active.create { color: #fff; }
+.qs-list li { display: flex; justify-content: space-between; align-items: center; }
+.cmd-hint { font-size: 11px; opacity: 0.6; }
+
+/* Foldery w drzewie notatek */
+.folder {
+  padding: 6px 8px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  user-select: none;
+}
+.folder:hover { color: var(--text); }
+.folder-group > ul { list-style: none; margin: 0; padding: 0; }
+.note-list li.folder-group { padding: 0; display: block; border-left: none; }
+.note-list li.folder-group:hover { background: transparent; }
+.note-list li.leaf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 
 .hint {
   font-size: 11px;

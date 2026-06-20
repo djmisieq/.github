@@ -7,6 +7,7 @@ import { Backlinks } from "./components/Backlinks";
 import { GraphView } from "./components/GraphView";
 import { Search } from "./components/Search";
 import { QuickSwitcher } from "./components/QuickSwitcher";
+import { CommandPalette, type Command } from "./components/CommandPalette";
 
 type View = "note" | "graph" | "search";
 
@@ -16,6 +17,7 @@ export default function App() {
   const [view, setView] = useState<View>("note");
   const [draft, setDraft] = useState("");
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   // Po wczytaniu skarbca otwórz pierwszą notatkę.
   useEffect(() => {
@@ -43,12 +45,16 @@ export default function App() {
     return () => clearTimeout(id);
   }, [draft, current, vault]);
 
-  // Globalny skrót: Ctrl/⌘+K otwiera szybki przełącznik notatek.
+  // Globalne skróty: Ctrl/⌘+K — przełącznik notatek, Ctrl/⌘+P — paleta poleceń.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setSwitcherOpen((v) => !v);
+      } else if (mod && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -71,6 +77,28 @@ export default function App() {
     setView("note");
   }
 
+  const commands: Command[] = [
+    { id: "switch", label: "Przejdź do notatki…", hint: "⌘K", run: () => setSwitcherOpen(true) },
+    { id: "new", label: "Nowa notatka", run: () => {
+        const name = prompt("Nazwa nowej notatki (możesz użyć Folder/Nazwa):");
+        if (name && name.trim()) openNote(name.trim());
+      } },
+    { id: "view-note", label: "Widok: Notatka", run: () => setView("note") },
+    { id: "view-graph", label: "Widok: Graf powiązań", run: () => setView("graph") },
+    { id: "view-search", label: "Widok: Wyszukiwanie", run: () => setView("search") },
+    ...(vault.fsSupported
+      ? [{ id: "folder", label: "Otwórz folder na dysku…", run: () => void vault.openFolder() }]
+      : []),
+    ...(current
+      ? [{ id: "del", label: `Usuń bieżącą notatkę „${current}"`, run: () => {
+            if (confirm(`Usunąć notatkę „${current}"?`)) {
+              void vault.deleteNote(current);
+              setCurrent(null);
+            }
+          } }]
+      : []),
+  ];
+
   return (
     <div className="app">
       {switcherOpen && (
@@ -79,6 +107,9 @@ export default function App() {
           onOpen={openNote}
           onClose={() => setSwitcherOpen(false)}
         />
+      )}
+      {paletteOpen && (
+        <CommandPalette commands={commands} onClose={() => setPaletteOpen(false)} />
       )}
       <header className="topbar">
         <div className="brand">📝 Moje Notatki</div>
@@ -94,8 +125,11 @@ export default function App() {
           </button>
         </nav>
         <div className="vault-info">
-          <button className="hint" onClick={() => setSwitcherOpen(true)} title="Szybki przełącznik">
+          <button className="hint" onClick={() => setSwitcherOpen(true)} title="Szybki przełącznik notatek">
             ⌘K
+          </button>
+          <button className="hint" onClick={() => setPaletteOpen(true)} title="Paleta poleceń">
+            ⌘P
           </button>
           <span title="Aktualny skarbiec">📁 {vault.store.label}</span>
           {vault.fsSupported && (

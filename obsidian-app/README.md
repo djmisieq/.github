@@ -11,7 +11,9 @@ nic nie jest zamknięte w cudzej chmurze.
 - **Backlinki** — zobacz, które notatki linkują do bieżącej
 - **Graf powiązań** — interaktywna wizualizacja połączeń (przeciągaj węzły, klik otwiera notatkę)
 - **Wyszukiwanie** pełnotekstowe po nazwach i treści
+- **Foldery** — organizuj notatki w drzewie (nazwa `Folder/Notatka`)
 - **Quick Switcher** (Ctrl/⌘+K) — błyskawiczne przejście do notatki lub utworzenie nowej
+- **Paleta poleceń** (Ctrl/⌘+P) — szybkie akcje bez myszki
 - **Tagi `#tag`** — filtrowanie notatek po tagach
 - **Skarbiec na dysku** — prawdziwe pliki `.md` (File System Access API) lub tryb demo w przeglądarce
 - **Integracja MCP / „Aion Mind"** — asystent AI (np. Claude) czyta, pisze, łączy i porządkuje Twoje notatki
